@@ -1,0 +1,47 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./mobile
+        run: npm ci
+
+      - name: 🔑 Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 🏗️ Build iOS Development
+        working-directory: ./mobile
+        run: |
+          npx eas-cli build --platform ios --profile development --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📊 Build Status
+        run: |
+          echo "✅ iOS build started successfully!"
+          echo "🔗 Check build status at: https://expo.dev/accounts/sooksand/projects/truthbetold-rent-app/builds"
+
