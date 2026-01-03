@@ -1,0 +1,15 @@
+{
+  "name": "truthbetold-supabase",
+  "version": "1.0.0",
+  "description": "Supabase scripts and utilities for TruthBeTold",
+  "scripts": {
+    "test-connection": "node scripts/test-connection.js",
+    "test-scoring": "node scripts/test-scoring-logic.js",
+    "deploy-info": "node scripts/deploy-function.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.10",
+    "dotenv": "^16.4.7"
+  }
+}
+
