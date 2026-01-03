@@ -28,6 +28,12 @@ export default function VerdictScreen() {
   const headerTranslateY = useSharedValue(-12);
   const cardFade = useSharedValue(0);
   const cardTranslateY = useSharedValue(12);
+  const row1Fade = useSharedValue(0);
+  const row1TranslateX = useSharedValue(-20);
+  const row2Fade = useSharedValue(0);
+  const row2TranslateX = useSharedValue(-20);
+  const row3Fade = useSharedValue(0);
+  const row3TranslateX = useSharedValue(-20);
 
   useEffect(() => {
     // Stagger animations
@@ -42,6 +48,16 @@ export default function VerdictScreen() {
       120,
       withTiming(0, { duration: 380, easing: Easing.out(Easing.cubic) })
     );
+
+    // Stagger breakdown rows
+    row1Fade.value = withDelay(300, withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) }));
+    row1TranslateX.value = withDelay(300, withTiming(0, { duration: 350, easing: Easing.out(Easing.cubic) }));
+
+    row2Fade.value = withDelay(400, withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) }));
+    row2TranslateX.value = withDelay(400, withTiming(0, { duration: 350, easing: Easing.out(Easing.cubic) }));
+
+    row3Fade.value = withDelay(500, withTiming(1, { duration: 350, easing: Easing.out(Easing.cubic) }));
+    row3TranslateX.value = withDelay(500, withTiming(0, { duration: 350, easing: Easing.out(Easing.cubic) }));
   }, []);
 
   const headerAnimStyle = useAnimatedStyle(() => ({
@@ -54,10 +70,25 @@ export default function VerdictScreen() {
     transform: [{ translateY: cardTranslateY.value }],
   }));
 
+  const row1AnimStyle = useAnimatedStyle(() => ({
+    opacity: row1Fade.value,
+    transform: [{ translateX: row1TranslateX.value }],
+  }));
+
+  const row2AnimStyle = useAnimatedStyle(() => ({
+    opacity: row2Fade.value,
+    transform: [{ translateX: row2TranslateX.value }],
+  }));
+
+  const row3AnimStyle = useAnimatedStyle(() => ({
+    opacity: row3Fade.value,
+    transform: [{ translateX: row3TranslateX.value }],
+  }));
+
   const calculateBreakdown = () => {
     const rentToIncomeRatio = ((rent / income) * 100).toFixed(1);
     const rentToMarketRatio = (((rent / market_rent) - 1) * 100).toFixed(1);
-    
+
     const incomeRatioPoints = rent / income > 0.35 ? -20 : 20;
     const marketComparisonPoints = rent > market_rent * 1.1 ? -30 : 30;
     const qualityPoints = unit_quality * 5;
@@ -66,28 +97,63 @@ export default function VerdictScreen() {
       incomeRatio: {
         value: rentToIncomeRatio,
         points: incomeRatioPoints,
-        label: `Rent is ${rentToIncomeRatio}% of income`,
-        sublabel: incomeRatioPoints > 0 ? 'Good! Under 35% threshold' : 'Too high! Over 35% threshold',
+        label: `${rentToIncomeRatio}% of your income`,
+        sublabel: incomeRatioPoints > 0
+          ? 'Sustainable — most budgets can handle this'
+          : 'Higher than what most budgets can sustain',
         passed: incomeRatioPoints > 0,
       },
       marketComparison: {
         value: rentToMarketRatio,
         points: marketComparisonPoints,
         label: `${Number(rentToMarketRatio) >= 0 ? '+' : ''}${rentToMarketRatio}% vs market rate`,
-        sublabel: marketComparisonPoints > 0 ? 'Fair pricing' : 'Overpriced vs market',
+        sublabel: marketComparisonPoints > 0
+          ? 'Fair pricing for the area'
+          : "You're paying more than comparable units",
         passed: marketComparisonPoints > 0,
       },
       quality: {
         value: unit_quality,
         points: qualityPoints,
         label: `Unit quality: ${unit_quality}/10`,
-        sublabel: `+${qualityPoints} points`,
+        sublabel: unit_quality >= 7
+          ? 'Decent quality — worth considering'
+          : unit_quality >= 5
+            ? 'Average quality for the price'
+            : 'Below average — this should cost less',
         passed: true,
       },
     };
   };
 
   const breakdown = calculateBreakdown();
+
+  const getActionableAdvice = () => {
+    const rentRatio = rent / income;
+    const marketDiff = ((rent / market_rent) - 1) * 100;
+    const fairRent = market_rent * 1.05; // 5% above market is reasonable
+    const targetRent = Math.min(income * 0.30, fairRent); // 30% rule or fair market, whichever is lower
+
+    if (verdict === 'Fair') {
+      return "You're in a good position. This rent leaves room for savings and emergencies.";
+    }
+
+    if (verdict === 'Borderline') {
+      if (marketDiff > 5) {
+        return `You have leverage — comparable units rent for around $${market_rent.toFixed(0)}. Try negotiating down to $${targetRent.toFixed(0)}.`;
+      }
+      return "This isn't a bad deal, but watch your budget closely. Build an emergency fund if you can.";
+    }
+
+    if (verdict === 'Overpriced') {
+      const savings = rent - targetRent;
+      return `You're paying more than the unit is worth. Comparable places rent for $${market_rent.toFixed(0)}. If you negotiate, aim for $${targetRent.toFixed(0)} — that's $${savings.toFixed(0)}/month back in your pocket.`;
+    }
+
+    // Predatory
+    const maxSafeRent = income * 0.35;
+    return `This rent is financially unsafe. Based on your income, you shouldn't pay more than $${maxSafeRent.toFixed(0)}/month. You deserve better — keep looking.`;
+  };
 
 
 
@@ -123,7 +189,7 @@ export default function VerdictScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>How We Scored This</Text>
 
-          <View style={styles.breakdownItem}>
+          <Animated.View style={[styles.breakdownItem, row1AnimStyle]}>
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>{breakdown.incomeRatio.label}</Text>
               <Text
@@ -137,11 +203,11 @@ export default function VerdictScreen() {
               </Text>
             </View>
             <Text style={styles.breakdownSublabel}>{breakdown.incomeRatio.sublabel}</Text>
-          </View>
+          </Animated.View>
 
           <View style={styles.divider} />
 
-          <View style={styles.breakdownItem}>
+          <Animated.View style={[styles.breakdownItem, row2AnimStyle]}>
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>{breakdown.marketComparison.label}</Text>
               <Text
@@ -155,11 +221,11 @@ export default function VerdictScreen() {
               </Text>
             </View>
             <Text style={styles.breakdownSublabel}>{breakdown.marketComparison.sublabel}</Text>
-          </View>
+          </Animated.View>
 
           <View style={styles.divider} />
 
-          <View style={styles.breakdownItem}>
+          <Animated.View style={[styles.breakdownItem, row3AnimStyle]}>
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>{breakdown.quality.label}</Text>
               <Text style={[styles.breakdownPoints, { color: COLORS.success }]}>
@@ -167,7 +233,7 @@ export default function VerdictScreen() {
               </Text>
             </View>
             <Text style={styles.breakdownSublabel}>{breakdown.quality.sublabel}</Text>
-          </View>
+          </Animated.View>
         </View>
 
         <View style={styles.card}>
@@ -182,6 +248,11 @@ export default function VerdictScreen() {
             {verdict === 'Predatory' &&
               "The rent severely exceeds affordability standards and is far above what similar units cost. This level of strain can lead to long‑term financial harm. You deserve better — consider other options immediately."}
           </Text>
+        </View>
+
+        <View style={styles.adviceCard}>
+          <Text style={styles.adviceTitle}>💡 What This Means for You</Text>
+          <Text style={styles.adviceText}>{getActionableAdvice()}</Text>
         </View>
 
         <View style={styles.actionArea}>
@@ -309,6 +380,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     color: COLORS.textSecondary,
+  },
+  adviceCard: {
+    backgroundColor: '#FFF9E6',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#F0AD4E',
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  adviceTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
+  },
+  adviceText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: COLORS.textPrimary,
+    fontWeight: '500',
   },
   actionArea: {
     marginTop: SPACING.md,

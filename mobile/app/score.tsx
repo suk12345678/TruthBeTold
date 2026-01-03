@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withDelay,
   Easing,
 } from 'react-native-reanimated';
 import ScoreDial from '../components/ScoreDial';
@@ -24,6 +25,7 @@ export default function ScoreScreen() {
 
   const fade = useSharedValue(0);
   const translateY = useSharedValue(12);
+  const shimmer = useSharedValue(0);
 
   useEffect(() => {
     fade.value = withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) });
@@ -31,11 +33,21 @@ export default function ScoreScreen() {
       duration: 380,
       easing: Easing.out(Easing.cubic),
     });
+
+    // Subtle shimmer effect on verdict badge
+    shimmer.value = withDelay(
+      600,
+      withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) })
+    );
   }, []);
 
   const animStyle = useAnimatedStyle(() => ({
     opacity: fade.value,
     transform: [{ translateY: translateY.value }],
+  }));
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    opacity: shimmer.value * 0.3,
   }));
 
   const handleSeeDetails = () => {
@@ -110,32 +122,41 @@ export default function ScoreScreen() {
         <ScoreDial score={score} />
 
         <View style={styles.verdictSection}>
-          <View
-            style={[
-              styles.verdictBadge,
-              { backgroundColor: verdictMeta.bg, borderColor: verdictMeta.color },
-            ]}
-          >
+          <Text style={styles.momentOfTruth}>{verdictMeta.momentOfTruth}</Text>
+
+          <View style={styles.verdictBadgeContainer}>
             <View
               style={[
-                styles.verdictDot,
+                styles.verdictBadge,
+                { backgroundColor: verdictMeta.bg, borderColor: verdictMeta.color },
+              ]}
+            >
+              <View
+                style={[
+                  styles.verdictDot,
+                  { backgroundColor: verdictMeta.color },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.verdictBadgeText,
+                  { color: verdictMeta.color },
+                ]}
+              >
+                {verdictMeta.label}
+              </Text>
+            </View>
+            <Animated.View
+              style={[
+                styles.shimmerOverlay,
+                shimmerStyle,
                 { backgroundColor: verdictMeta.color },
               ]}
             />
-            <Text
-              style={[
-                styles.verdictBadgeText,
-                { color: verdictMeta.color },
-              ]}
-            >
-              {verdictMeta.label}
-            </Text>
           </View>
 
           <Text style={styles.verdictPrimaryText}>{verdictMeta.text}</Text>
-          <Text style={styles.verdictSecondaryText}>
-            Based on your rent, income, and unit quality.
-          </Text>
+          <Text style={styles.supportLine}>{verdictMeta.supportLine}</Text>
         </View>
 
         <View style={styles.scoreActions}>
@@ -188,6 +209,18 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
     paddingHorizontal: SPACING.lg,
   },
+  momentOfTruth: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+    fontStyle: 'italic',
+  },
+  verdictBadgeContainer: {
+    position: 'relative',
+    marginBottom: SPACING.md,
+  },
   verdictBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -195,7 +228,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
-    marginBottom: SPACING.sm,
+  },
+  shimmerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 999,
   },
   verdictDot: {
     width: 8,
@@ -212,13 +252,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textPrimary,
     textAlign: 'center',
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING.md,
+    lineHeight: 26,
   },
-  verdictSecondaryText: {
+  supportLine: {
     fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+    fontStyle: 'italic',
   },
   scoreActions: {
     width: '100%',

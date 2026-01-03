@@ -20,7 +20,7 @@ export const SPACING = {
   xl: 32,
 };
 
-// Verdict levels & colors
+// Verdict levels & colors with emotional copy
 export function getVerdictMeta(verdict: string) {
   switch (verdict) {
     case 'Fair':
@@ -28,21 +28,30 @@ export function getVerdictMeta(verdict: string) {
         label: "GOOD",
         color: COLORS.success,
         bg: "rgba(92,184,92,0.1)",
-        text: "This rent respects your budget.",
+        text: "This rent respects your hustle. You're not stretching — you're choosing.",
+        momentOfTruth: "This is what your budget has been trying to tell you.",
+        supportLine: "You found a sustainable deal in a tough market.",
+        shareText: "Just checked my rent with TruthBeTold — turns out I'm doing okay! 💚",
       };
     case 'Borderline':
       return {
         label: "TIGHT",
         color: COLORS.warning,
         bg: "rgba(240,173,78,0.12)",
-        text: "You can make this work, but it will squeeze you.",
+        text: "You can make this work, but it'll take discipline. This is a "think twice" zone.",
+        momentOfTruth: "Here's the truth behind this rent.",
+        supportLine: "You're not the problem — the market is.",
+        shareText: "TruthBeTold says this rent is in the yellow zone… what do you think? ⚠️",
       };
     case 'Overpriced':
       return {
         label: "PUSHED",
         color: COLORS.pushed,
         bg: "rgba(243,156,18,0.12)",
-        text: "This landlord is pushing it for your budget.",
+        text: "This landlord is asking more than your budget can comfortably carry.",
+        momentOfTruth: "Let's cut through the noise — here's what this deal really means.",
+        supportLine: "Your worth isn't defined by a landlord's price tag.",
+        shareText: "TruthBeTold says this rent is squeezing me — what do you think? 🧡",
       };
     case 'Predatory':
     default:
@@ -50,7 +59,10 @@ export function getVerdictMeta(verdict: string) {
         label: "DANGEROUS",
         color: COLORS.danger,
         bg: "rgba(217,83,79,0.12)",
-        text: "This deal is dangerous for your budget.",
+        text: "This deal puts you at risk. You deserve better than a rent that drains you.",
+        momentOfTruth: "This is what your budget has been trying to tell you.",
+        supportLine: "This score is about the deal, not your value.",
+        shareText: "Just checked my rent with TruthBeTold… and wow. 🚨",
       };
   }
 }
