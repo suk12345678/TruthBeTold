@@ -1,5 +1,14 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  Easing,
+} from 'react-native-reanimated';
+import { COLORS, SPACING, getVerdictMeta } from '../constants/designTokens';
 
 export default function VerdictScreen() {
   const router = useRouter();
@@ -12,12 +21,38 @@ export default function VerdictScreen() {
   const market_rent = parseFloat(params.market_rent as string);
   const unit_quality = parseInt(params.unit_quality as string);
 
-  const getScoreColor = () => {
-    if (verdict === 'Fair') return '#10b981';
-    if (verdict === 'Borderline') return '#f59e0b';
-    if (verdict === 'Overpriced') return '#f97316';
-    return '#ef4444';
-  };
+  const verdictMeta = getVerdictMeta(verdict);
+
+  // Animation values
+  const headerFade = useSharedValue(0);
+  const headerTranslateY = useSharedValue(-12);
+  const cardFade = useSharedValue(0);
+  const cardTranslateY = useSharedValue(12);
+
+  useEffect(() => {
+    // Stagger animations
+    headerFade.value = withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) });
+    headerTranslateY.value = withTiming(0, { duration: 380, easing: Easing.out(Easing.cubic) });
+
+    cardFade.value = withDelay(
+      120,
+      withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) })
+    );
+    cardTranslateY.value = withDelay(
+      120,
+      withTiming(0, { duration: 380, easing: Easing.out(Easing.cubic) })
+    );
+  }, []);
+
+  const headerAnimStyle = useAnimatedStyle(() => ({
+    opacity: headerFade.value,
+    transform: [{ translateY: headerTranslateY.value }],
+  }));
+
+  const cardAnimStyle = useAnimatedStyle(() => ({
+    opacity: cardFade.value,
+    transform: [{ translateY: cardTranslateY.value }],
+  }));
 
   const calculateBreakdown = () => {
     const rentToIncomeRatio = ((rent / income) * 100).toFixed(1);
@@ -61,28 +96,44 @@ export default function VerdictScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={[styles.scoreNumber, { color: getScoreColor() }]}>
-          {score}/100
-        </Text>
-        <Text style={[styles.verdict, { color: getScoreColor() }]}>
-          {verdict}
-        </Text>
-      </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <Animated.View style={[styles.headerSection, headerAnimStyle]}>
+        <Text style={styles.appNameTop}>TruthBeTold</Text>
+        <Text style={styles.pageTitle}>Full Breakdown</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Score Breakdown</Text>
-        
-        <View style={styles.breakdownCard}>
+        <View style={styles.scoreDisplay}>
+          <Text style={styles.scoreNumber}>{score}</Text>
+          <Text style={styles.scoreOutOf}>/100</Text>
+        </View>
+
+        <View
+          style={[
+            styles.verdictBadge,
+            { backgroundColor: verdictMeta.bg, borderColor: verdictMeta.color },
+          ]}
+        >
+          <View style={[styles.verdictDot, { backgroundColor: verdictMeta.color }]} />
+          <Text style={[styles.verdictBadgeText, { color: verdictMeta.color }]}>
+            {verdictMeta.label}
+          </Text>
+        </View>
+      </Animated.View>
+
+      <Animated.View style={cardAnimStyle}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>How We Scored This</Text>
+
           <View style={styles.breakdownItem}>
-            <View style={styles.breakdownHeader}>
+            <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>{breakdown.incomeRatio.label}</Text>
-              <Text style={[
-                styles.breakdownPoints,
-                { color: breakdown.incomeRatio.passed ? '#10b981' : '#ef4444' }
-              ]}>
-                {breakdown.incomeRatio.points > 0 ? '+' : ''}{breakdown.incomeRatio.points}
+              <Text
+                style={[
+                  styles.breakdownPoints,
+                  { color: breakdown.incomeRatio.passed ? COLORS.success : COLORS.danger },
+                ]}
+              >
+                {breakdown.incomeRatio.points > 0 ? '+' : ''}
+                {breakdown.incomeRatio.points}
               </Text>
             </View>
             <Text style={styles.breakdownSublabel}>{breakdown.incomeRatio.sublabel}</Text>
@@ -91,13 +142,16 @@ export default function VerdictScreen() {
           <View style={styles.divider} />
 
           <View style={styles.breakdownItem}>
-            <View style={styles.breakdownHeader}>
+            <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>{breakdown.marketComparison.label}</Text>
-              <Text style={[
-                styles.breakdownPoints,
-                { color: breakdown.marketComparison.passed ? '#10b981' : '#ef4444' }
-              ]}>
-                {breakdown.marketComparison.points > 0 ? '+' : ''}{breakdown.marketComparison.points}
+              <Text
+                style={[
+                  styles.breakdownPoints,
+                  { color: breakdown.marketComparison.passed ? COLORS.success : COLORS.danger },
+                ]}
+              >
+                {breakdown.marketComparison.points > 0 ? '+' : ''}
+                {breakdown.marketComparison.points}
               </Text>
             </View>
             <Text style={styles.breakdownSublabel}>{breakdown.marketComparison.sublabel}</Text>
@@ -106,39 +160,40 @@ export default function VerdictScreen() {
           <View style={styles.divider} />
 
           <View style={styles.breakdownItem}>
-            <View style={styles.breakdownHeader}>
+            <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>{breakdown.quality.label}</Text>
-              <Text style={[styles.breakdownPoints, { color: '#10b981' }]}>
+              <Text style={[styles.breakdownPoints, { color: COLORS.success }]}>
                 +{breakdown.quality.points}
               </Text>
             </View>
             <Text style={styles.breakdownSublabel}>{breakdown.quality.sublabel}</Text>
           </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>What This Means</Text>
-        <Text style={styles.explanation}>
-          {verdict === 'Fair' &&
-            "Your rent sits comfortably within affordability guidelines and aligns well with local market conditions. You're not overpaying, and this deal supports long‑term financial stability."}
-          {verdict === 'Borderline' &&
-            "You're close to the upper edge of what's considered sustainable. It's not a bad deal, but it leaves less room for savings, emergencies, or lifestyle flexibility. Negotiate if you can."}
-          {verdict === 'Overpriced' &&
-            "The rent exceeds typical affordability guidelines and is higher than comparable units in your area. You're not being exploited, but you're definitely overpaying. Explore alternatives or negotiate aggressively."}
-          {verdict === 'Predatory' &&
-            "The rent severely exceeds affordability standards and is far above what similar units cost. This level of strain can lead to long‑term financial harm. You deserve better — consider other options immediately."}
-        </Text>
-      </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>What This Means</Text>
+          <Text style={styles.explanationText}>
+            {verdict === 'Fair' &&
+              "Your rent sits comfortably within affordability guidelines and aligns well with local market conditions. You're not overpaying, and this deal supports long‑term financial stability."}
+            {verdict === 'Borderline' &&
+              "You're close to the upper edge of what's considered sustainable. It's not a bad deal, but it leaves less room for savings, emergencies, or lifestyle flexibility. Negotiate if you can."}
+            {verdict === 'Overpriced' &&
+              "The rent exceeds typical affordability guidelines and is higher than comparable units in your area. You're not being exploited, but you're definitely overpaying. Explore alternatives or negotiate aggressively."}
+            {verdict === 'Predatory' &&
+              "The rent severely exceeds affordability standards and is far above what similar units cost. This level of strain can lead to long‑term financial harm. You deserve better — consider other options immediately."}
+          </Text>
+        </View>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={handleTryAnother}
-        >
-          <Text style={styles.secondaryButtonText}>Try Another Address</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.actionArea}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.primaryButton}
+            onPress={handleTryAnother}
+          >
+            <Text style={styles.primaryButtonText}>Check Another Place</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -146,94 +201,129 @@ export default function VerdictScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
   },
-  header: {
-    padding: 32,
+  scrollContent: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.xl,
+  },
+  headerSection: {
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginBottom: SPACING.lg,
+  },
+  appNameTop: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
+  },
+  pageTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.lg,
+  },
+  scoreDisplay: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: SPACING.md,
   },
   scoreNumber: {
-    fontSize: 64,
-    fontWeight: 'bold',
+    fontSize: 56,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
   },
-  verdict: {
+  scoreOutOf: {
     fontSize: 24,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 8,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginLeft: 4,
   },
-  section: {
-    padding: 20,
+  verdictBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#000',
+  verdictDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: SPACING.xs,
   },
-  breakdownCard: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    padding: 16,
+  verdictBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.md,
   },
   breakdownItem: {
-    paddingVertical: 12,
+    paddingVertical: SPACING.sm,
   },
-  breakdownHeader: {
+  breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   breakdownLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#000',
+    color: COLORS.textPrimary,
     flex: 1,
+    marginRight: SPACING.sm,
   },
   breakdownPoints: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
   },
   breakdownSublabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#E8E8E8',
+    marginVertical: SPACING.xs,
   },
-  explanation: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#333',
+  explanationText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: COLORS.textSecondary,
   },
-  actions: {
-    padding: 20,
-    gap: 12,
-  },
-  button: {
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
+  actionArea: {
+    marginTop: SPACING.md,
   },
   primaryButton: {
-    backgroundColor: '#000',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  secondaryButton: {
-    backgroundColor: '#f3f4f6',
-  },
-  secondaryButtonText: {
-    color: '#000',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
