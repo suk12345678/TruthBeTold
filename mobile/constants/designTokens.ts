@@ -38,7 +38,7 @@ export function getVerdictMeta(verdict: string) {
         label: "TIGHT",
         color: COLORS.warning,
         bg: "rgba(240,173,78,0.12)",
-        text: "You can make this work, but it'll take discipline. This is a "think twice" zone.",
+        text: "You can make this work, but it'll take discipline. This is a 'think twice' zone.",
         momentOfTruth: "Here's the truth behind this rent.",
         supportLine: "You're not the problem — the market is.",
         shareText: "TruthBeTold says this rent is in the yellow zone… what do you think? ⚠️",
