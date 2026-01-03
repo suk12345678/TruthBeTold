@@ -1,17 +1,29 @@
-name: iOS Build
+name: iOS Build (Free - No EAS)
 
 on:
   push:
     branches: [master, main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/ios-build.yml'
   pull_request:
     branches: [master, main]
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'simulator'
+        type: choice
+        options:
+          - simulator
+          - device
 
 jobs:
   build-ios:
     name: Build iOS App
-    runs-on: macos-latest
-    
+    runs-on: macos-14
+
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -31,17 +43,62 @@ jobs:
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
+          eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: 🏗️ Build iOS Development
+      - name: 🍎 Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: 📱 Prebuild iOS project
         working-directory: ./mobile
         run: |
-          npx eas-cli build --platform ios --profile development --non-interactive --no-wait
+          npx expo prebuild --platform ios --clean
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: 📊 Build Status
+      - name: 📦 Install CocoaPods dependencies
+        working-directory: ./mobile/ios
         run: |
-          echo "✅ iOS build started successfully!"
-          echo "🔗 Check build status at: https://expo.dev/accounts/sooksand/projects/truthbetold-rent-app/builds"
+          pod install
+
+      - name: 🏗️ Build iOS Simulator
+        if: github.event.inputs.build_type == 'simulator' || github.event.inputs.build_type == ''
+        working-directory: ./mobile/ios
+        run: |
+          xcodebuild \
+            -workspace TruthBeTold.xcworkspace \
+            -scheme TruthBeTold \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -derivedDataPath build \
+            build
+
+      - name: 📦 Create Simulator Archive
+        if: github.event.inputs.build_type == 'simulator' || github.event.inputs.build_type == ''
+        working-directory: ./mobile/ios
+        run: |
+          cd build/Build/Products/Debug-iphonesimulator
+          zip -r TruthBeTold-simulator.app.zip TruthBeTold.app
+
+      - name: 📤 Upload Simulator Build
+        if: github.event.inputs.build_type == 'simulator' || github.event.inputs.build_type == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: TruthBeTold-iOS-Simulator-${{ github.sha }}
+          path: mobile/ios/build/Build/Products/Debug-iphonesimulator/TruthBeTold-simulator.app.zip
+          retention-days: 30
+
+      - name: 📊 Build Summary
+        run: |
+          echo "✅ iOS build completed successfully!"
+          echo "📱 Build type: ${{ github.event.inputs.build_type || 'simulator' }}"
+          echo "🔗 Download artifacts from the Actions tab"
+          echo ""
+          echo "To install on simulator:"
+          echo "1. Download the .app.zip file"
+          echo "2. Unzip it"
+          echo "3. Drag TruthBeTold.app to your iOS Simulator"
 

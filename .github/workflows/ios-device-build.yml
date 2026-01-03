@@ -1,0 +1,134 @@
+name: iOS Device Build (Ad-Hoc)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'Build number'
+        required: false
+        default: '1'
+
+jobs:
+  build-ios-device:
+    name: Build iOS for Device
+    runs-on: macos-14
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./mobile
+        run: npm ci
+
+      - name: 🔑 Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 🍎 Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: 🔐 Import Code Signing Certificates
+        if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' }}
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          
+          # Import certificate
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          echo -n "$IOS_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          security import $CERTIFICATE_PATH -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          
+          # Import provisioning profile
+          PROVISION_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo -n "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode -o $PROVISION_PATH
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PROVISION_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: 📱 Prebuild iOS project
+        working-directory: ./mobile
+        run: |
+          npx expo prebuild --platform ios --clean
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📦 Install CocoaPods dependencies
+        working-directory: ./mobile/ios
+        run: pod install
+
+      - name: 🏗️ Build iOS IPA
+        if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' }}
+        working-directory: ./mobile/ios
+        run: |
+          xcodebuild \
+            -workspace TruthBeTold.xcworkspace \
+            -scheme TruthBeTold \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/TruthBeTold.xcarchive \
+            -allowProvisioningUpdates \
+            archive
+          
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/TruthBeTold.xcarchive \
+            -exportPath build \
+            -exportOptionsPlist ../exportOptions.plist
+
+      - name: 📤 Upload IPA
+        if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TruthBeTold-iOS-Device-${{ github.sha }}
+          path: mobile/ios/build/*.ipa
+          retention-days: 30
+
+      - name: 🎉 Create GitHub Release
+        if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' && github.ref == 'refs/heads/master' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.0.${{ github.event.inputs.build_number }}
+          name: Release v1.0.${{ github.event.inputs.build_number }}
+          files: mobile/ios/build/*.ipa
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Build Summary
+        run: |
+          echo "✅ iOS device build completed!"
+          if [ -z "${{ secrets.IOS_CERTIFICATE_BASE64 }}" ]; then
+            echo "⚠️  No certificates configured. Simulator build only."
+            echo ""
+            echo "To build for devices, add these secrets:"
+            echo "- IOS_CERTIFICATE_BASE64"
+            echo "- IOS_CERTIFICATE_PASSWORD"
+            echo "- IOS_PROVISIONING_PROFILE_BASE64"
+          else
+            echo "📱 IPA file created successfully"
+            echo "🔗 Download from Actions artifacts or GitHub Releases"
+          fi
+
