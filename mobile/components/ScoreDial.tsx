@@ -1,108 +1,115 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  interpolateColor,
+  Easing,
+  useAnimatedStyle,
+  withSequence,
+} from "react-native-reanimated";
+import { COLORS } from "../constants/designTokens";
 
-// Only import Reanimated on native platforms
-let Animated: any;
-let useSharedValue: any;
-let useAnimatedProps: any;
-let withTiming: any;
-let interpolateColor: any;
-let AnimatedCircle: any;
-
-if (Platform.OS !== 'web') {
-  const Reanimated = require('react-native-reanimated');
-  Animated = Reanimated.default;
-  useSharedValue = Reanimated.useSharedValue;
-  useAnimatedProps = Reanimated.useAnimatedProps;
-  withTiming = Reanimated.withTiming;
-  interpolateColor = Reanimated.interpolateColor;
-  AnimatedCircle = Animated.createAnimatedComponent(Circle);
-}
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export default function ScoreDial({ score }: { score: number }) {
   const radius = 80;
   const strokeWidth = 18;
   const circumference = 2 * Math.PI * radius;
 
-  const [webProgress, setWebProgress] = useState(0);
+  const progress = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const glowOpacity = useSharedValue(0.18);
 
   useEffect(() => {
-    // Web: use state-based animation
-    let start = 0;
-    const end = score / 100;
-    const duration = 1200;
-    const startTime = Date.now();
+    progress.value = withTiming(score / 100, {
+      duration: 1100,
+      easing: Easing.out(Easing.cubic),
+    });
 
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
+    scale.value = withSequence(
+      withTiming(1.08, { duration: 140, easing: Easing.out(Easing.cubic) }),
+      withTiming(1, { duration: 140, easing: Easing.out(Easing.cubic) })
+    );
 
-      // Easing function (ease-out)
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setWebProgress(start + (end - start) * eased);
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-
-    requestAnimationFrame(animate);
+    glowOpacity.value = withSequence(
+      withTiming(0.32, { duration: 200 }),
+      withTiming(0.18, { duration: 300 })
+    );
   }, [score]);
 
-  // Get color based on progress
-  const getColor = (prog: number) => {
-    if (prog < 0.5) {
-      // Interpolate between red and yellow
-      const t = prog / 0.5;
-      return `rgb(${Math.round(217 + (240 - 217) * t)}, ${Math.round(83 + (173 - 83) * t)}, ${Math.round(79 + (78 - 79) * t)})`;
-    } else {
-      // Interpolate between yellow and green
-      const t = (prog - 0.5) / 0.5;
-      return `rgb(${Math.round(240 + (92 - 240) * t)}, ${Math.round(173 + (184 - 173) * t)}, ${Math.round(78 + (92 - 78) * t)})`;
-    }
-  };
+  const animatedProps = useAnimatedProps(() => {
+    return {
+      strokeDashoffset: circumference * (1 - progress.value),
+      stroke: interpolateColor(
+        progress.value,
+        [0, 0.5, 1],
+        [COLORS.danger, COLORS.warning, COLORS.success]
+      ),
+    };
+  });
 
-  // Simple version with manual animation (works on all platforms)
-  const offset = circumference * (1 - webProgress);
-  const color = getColor(webProgress);
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
 
   return (
-    <View style={styles.container}>
-      <Svg width={200} height={200}>
-        <Circle
-          cx={100}
-          cy={100}
-          r={radius}
-          stroke="#eee"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
+    <Animated.View style={[styles.dialWrapper, containerStyle]}>
+      <Animated.View style={[styles.dialGlow, glowStyle]} />
+      <View style={styles.dialContainer}>
+        <Svg width={200} height={200}>
+          <Circle
+            cx={100}
+            cy={100}
+            r={radius}
+            stroke="#E3E3E3"
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
 
-        <Circle
-          cx={100}
-          cy={100}
-          r={radius}
-          stroke={color}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          rotation="-90"
-          origin="100, 100"
-        />
-      </Svg>
+          <AnimatedCircle
+            cx={100}
+            cy={100}
+            r={radius}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={circumference}
+            animatedProps={animatedProps}
+            strokeLinecap="round"
+            rotation="-90"
+            origin="100, 100"
+          />
+        </Svg>
 
-      <View style={styles.scoreContainer}>
-        <Text style={styles.scoreText}>{score}</Text>
+        <View style={styles.scoreContainer}>
+          <Text style={styles.scoreNumber}>{score}</Text>
+          <Text style={styles.scoreLabel}>/100</Text>
+        </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  dialWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 24,
+  },
+  dialGlow: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "rgba(0,0,0,0.04)",
+  },
+  dialContainer: {
     alignItems: "center",
     justifyContent: "center",
   },
@@ -111,9 +118,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  scoreText: {
-    fontSize: 48,
-    fontWeight: "bold",
+  scoreNumber: {
+    fontSize: 40,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+  scoreLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: -4,
   },
 });
 

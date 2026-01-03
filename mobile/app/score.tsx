@@ -1,9 +1,16 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import ScoreDial from '../components/ScoreDial';
+import { COLORS, SPACING, getVerdictMeta } from '../constants/designTokens';
 
 export default function ScoreScreen() {
   const router = useRouter();
@@ -13,46 +20,23 @@ export default function ScoreScreen() {
 
   const score = parseInt(params.score as string);
   const verdict = params.verdict as string;
+  const verdictMeta = getVerdictMeta(verdict);
 
-  const getScoreColor = () => {
-    if (verdict === 'Fair') return '#10b981';
-    if (verdict === 'Borderline') return '#f59e0b';
-    if (verdict === 'Overpriced') return '#f97316';
-    return '#ef4444'; // Predatory
-  };
+  const fade = useSharedValue(0);
+  const translateY = useSharedValue(12);
 
-  const getEmoji = () => {
-    if (verdict === 'Fair') return '✅';
-    if (verdict === 'Borderline') return '⚠️';
-    if (verdict === 'Overpriced') return '🚨';
-    return '🔴'; // Predatory
-  };
+  useEffect(() => {
+    fade.value = withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) });
+    translateY.value = withTiming(0, {
+      duration: 380,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, []);
 
-  const getMessage = () => {
-    if (verdict === 'Fair') {
-      return "You're in a healthy range — this is a sustainable living situation.";
-    }
-    if (verdict === 'Borderline') {
-      return "This rent isn't predatory, but it will put pressure on your monthly budget.";
-    }
-    if (verdict === 'Overpriced') {
-      return "You're paying more than the market suggests — this deal isn't in your favor.";
-    }
-    return "This rent is financially unsafe — you should walk away.";
-  };
-
-  const getHeadline = () => {
-    if (verdict === 'Fair') {
-      return "This rent respects your budget.";
-    }
-    if (verdict === 'Borderline') {
-      return "You can make this work, but it'll squeeze you.";
-    }
-    if (verdict === 'Overpriced') {
-      return "This landlord is pushing it.";
-    }
-    return "This deal is dangerous.";
-  };
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: fade.value,
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const handleSeeDetails = () => {
     router.push({
@@ -118,134 +102,150 @@ export default function ScoreScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View ref={scoreCardRef} style={styles.scoreCard} collapsable={false}>
-        <Text style={styles.emoji}>{getEmoji()}</Text>
+    <View style={styles.screenContainer}>
+      <Animated.View style={[styles.scoreScreenContent, animStyle]}>
+        <Text style={styles.appNameTop}>TruthBeTold</Text>
+        <Text style={styles.screenTitle}>Your Rent Score</Text>
 
-        <Text style={styles.scoreLabel}>Your TruthBeTold Score</Text>
-
-        {/* Animated Score Dial */}
         <ScoreDial score={score} />
 
-        <Text style={[styles.verdict, { color: getScoreColor() }]}>
-          {verdict}
-        </Text>
+        <View style={styles.verdictSection}>
+          <View
+            style={[
+              styles.verdictBadge,
+              { backgroundColor: verdictMeta.bg, borderColor: verdictMeta.color },
+            ]}
+          >
+            <View
+              style={[
+                styles.verdictDot,
+                { backgroundColor: verdictMeta.color },
+              ]}
+            />
+            <Text
+              style={[
+                styles.verdictBadgeText,
+                { color: verdictMeta.color },
+              ]}
+            >
+              {verdictMeta.label}
+            </Text>
+          </View>
 
-        <Text style={styles.headline}>{getHeadline()}</Text>
-
-        <Text style={styles.message}>{getMessage()}</Text>
-
-        {/* Watermark for shared image */}
-        <Text style={styles.watermark}>TruthBeTold.app</Text>
-      </View>
-
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton, isSharing && styles.buttonDisabled]}
-          onPress={handleShare}
-          disabled={isSharing}
-        >
-          <Text style={styles.primaryButtonText}>
-            {isSharing ? '📤 Generating...' : '📤 Share Your Score'}
+          <Text style={styles.verdictPrimaryText}>{verdictMeta.text}</Text>
+          <Text style={styles.verdictSecondaryText}>
+            Based on your rent, income, and unit quality.
           </Text>
-        </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={handleSeeDetails}
-        >
-          <Text style={styles.secondaryButtonText}>See Full Details</Text>
-        </TouchableOpacity>
+        <View style={styles.scoreActions}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.primaryButton}
+            onPress={handleSeeDetails}
+          >
+            <Text style={styles.primaryButtonText}>View Full Breakdown</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={handleTryAnother}
-        >
-          <Text style={styles.secondaryButtonText}>Try Another Address</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.secondaryLink}
+            onPress={handleTryAnother}
+          >
+            <Text style={styles.secondaryLinkText}>Try another place</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screenContainer: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-    justifyContent: 'space-between',
+    backgroundColor: COLORS.background,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xl,
   },
-  scoreCard: {
+  scoreScreenContent: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 16,
   },
-  emoji: {
-    fontSize: 80,
-    marginBottom: 8,
+  appNameTop: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
   },
-  scoreLabel: {
-    fontSize: 16,
-    color: '#666',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 16,
+  screenTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.lg,
   },
-  verdict: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
+  verdictSection: {
+    alignItems: 'center',
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.lg,
   },
-  headline: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-    textAlign: 'center',
-    marginTop: 16,
-    paddingHorizontal: 20,
+  verdictBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.sm,
   },
-  message: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 8,
-    paddingHorizontal: 20,
-    lineHeight: 24,
+  verdictDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: SPACING.xs,
   },
-  watermark: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 24,
+  verdictBadgeText: {
+    fontSize: 13,
     fontWeight: '600',
   },
-  actions: {
-    gap: 12,
+  verdictPrimaryText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+    marginBottom: SPACING.xs,
   },
-  button: {
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
+  verdictSecondaryText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  scoreActions: {
+    width: '100%',
+    marginTop: SPACING.xl,
   },
   primaryButton: {
-    backgroundColor: '#000',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  secondaryButton: {
-    backgroundColor: '#f3f4f6',
-  },
-  secondaryButtonText: {
-    color: '#000',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  secondaryLink: {
+    marginTop: SPACING.md,
+    alignItems: 'center',
+  },
+  secondaryLinkText: {
+    color: COLORS.textSecondary,
+    fontSize: 15,
+    textDecorationLine: 'underline',
   },
 });
 

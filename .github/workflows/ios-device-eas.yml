@@ -1,0 +1,81 @@
+name: iOS Device Build (EAS)
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/ios-device-eas.yml'
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+
+jobs:
+  build-ios-device:
+    name: Build iOS for Device (EAS)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./mobile
+        run: npm ci
+
+      - name: 🔑 Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📱 Build iOS Development Build
+        working-directory: ./mobile
+        run: |
+          PROFILE="${{ github.event.inputs.profile || 'development' }}"
+          echo "🏗️ Starting EAS build with profile: $PROFILE"
+          
+          eas build \
+            --platform ios \
+            --profile $PROFILE \
+            --non-interactive \
+            --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📊 Build Status
+        run: |
+          echo "✅ iOS device build started successfully!"
+          echo "📱 Profile: ${{ github.event.inputs.profile || 'development' }}"
+          echo ""
+          echo "🔗 Check build status at:"
+          echo "   https://expo.dev/accounts/sooksand/projects/truthbetold-rent-app/builds"
+          echo ""
+          echo "📥 Once complete, install on your iPhone:"
+          echo "   1. Open the build URL on your iPhone"
+          echo "   2. Tap 'Install' button"
+          echo "   3. Follow the prompts to install"
+          echo ""
+          echo "💡 Development builds include:"
+          echo "   - Hot reload"
+          echo "   - Debug menu"
+          echo "   - Can load updates from your dev server"
+

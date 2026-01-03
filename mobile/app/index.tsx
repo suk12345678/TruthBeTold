@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { COLORS, SPACING } from '../constants/designTokens';
 
 export default function InputScreen() {
   const router = useRouter();
@@ -156,13 +157,20 @@ export default function InputScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>What's the truth about your rent?</Text>
-        <Text style={styles.subtitle}>Enter your details below</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.headerArea}>
+          <Text style={styles.appName}>TruthBeTold</Text>
+          <Text style={styles.appSubtitle}>
+            See if this rent truly respects your budget.
+          </Text>
+        </View>
 
         {/* Dev Tools - Quick Fill Buttons */}
         <View style={styles.devTools}>
@@ -195,73 +203,84 @@ export default function InputScreen() {
           </View>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Monthly Rent ($)</Text>
+        <View style={styles.card}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Monthly Rent</Text>
             <TextInput
               style={styles.input}
-              placeholder="2000"
+              placeholder="$2,400"
+              placeholderTextColor="#B0B0B0"
               keyboardType="numeric"
               value={formData.rent}
               onChangeText={(text) => setFormData({ ...formData, rent: text })}
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Monthly Income ($)</Text>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Monthly Take-Home Income</Text>
             <TextInput
               style={styles.input}
-              placeholder="6000"
+              placeholder="$7,200"
+              placeholderTextColor="#B0B0B0"
               keyboardType="numeric"
               value={formData.income}
               onChangeText={(text) => setFormData({ ...formData, income: text })}
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Market Rent ($)</Text>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Market Rent</Text>
             <TextInput
               style={styles.input}
-              placeholder="1800"
+              placeholder="$2,200"
+              placeholderTextColor="#B0B0B0"
               keyboardType="numeric"
               value={formData.market_rent}
               onChangeText={(text) => setFormData({ ...formData, market_rent: text })}
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Unit Quality (0-10)</Text>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Unit Quality (0–10)</Text>
             <TextInput
               style={styles.input}
               placeholder="7"
+              placeholderTextColor="#B0B0B0"
               keyboardType="numeric"
               value={formData.unit_quality}
               onChangeText={(text) => setFormData({ ...formData, unit_quality: text })}
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Zip Code</Text>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Zip Code</Text>
             <TextInput
               style={styles.input}
               placeholder="90210"
+              placeholderTextColor="#B0B0B0"
               keyboardType="numeric"
               value={formData.zip_code}
               onChangeText={(text) => setFormData({ ...formData, zip_code: text })}
             />
           </View>
+        </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TouchableOpacity 
-            style={[styles.button, loading && styles.buttonDisabled]}
+        <View style={styles.primaryActionArea}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
             onPress={handleCalculate}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>
-              {loading ? 'Calculating...' : 'Calculate My Score'}
+            <Text style={styles.primaryButtonText}>
+              {loading ? 'Scoring...' : 'Get My Rent Score'}
             </Text>
           </TouchableOpacity>
+          <Text style={styles.disclaimer}>
+            We never judge you. We judge the deal.
+          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -271,75 +290,103 @@ export default function InputScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
-    padding: 20,
+    flexGrow: 1,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.xl,
   },
-  title: {
+  headerArea: {
+    marginBottom: SPACING.xl,
+  },
+  appName: {
     fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#000',
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
   },
-  subtitle: {
+  appSubtitle: {
     fontSize: 16,
-    color: '#666',
-    marginBottom: 24,
+    color: COLORS.textSecondary,
+    lineHeight: 22,
   },
-  form: {
-    gap: 16,
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
+    padding: SPACING.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
-  inputGroup: {
-    gap: 8,
+  fieldGroup: {
+    marginBottom: SPACING.md,
   },
-  label: {
+  fieldLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: '#D7D7D7',
+    borderRadius: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    color: COLORS.textPrimary,
+    backgroundColor: '#FBFBFB',
   },
-  button: {
-    backgroundColor: '#000',
-    padding: 16,
-    borderRadius: 8,
+  primaryActionArea: {
+    marginTop: SPACING.lg,
     alignItems: 'center',
-    marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  primaryButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
-  buttonText: {
-    color: '#fff',
+  primaryButtonDisabled: {
+    opacity: 0.5,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+  },
+  disclaimer: {
+    marginTop: SPACING.sm,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
   error: {
-    color: '#ef4444',
+    color: COLORS.danger,
     fontSize: 14,
-    marginTop: -8,
+    marginTop: SPACING.sm,
+    textAlign: 'center',
   },
   devTools: {
     backgroundColor: '#f0f9ff',
     borderWidth: 2,
     borderColor: '#3b82f6',
     borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
+    borderRadius: 12,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   devLabel: {
     fontSize: 12,
     fontWeight: 'bold',
     color: '#1e40af',
-    marginBottom: 8,
+    marginBottom: SPACING.xs,
     textTransform: 'uppercase',
   },
   devButtons: {
@@ -355,16 +402,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   devButtonFair: {
-    backgroundColor: '#10b981',
+    backgroundColor: COLORS.success,
   },
   devButtonBorderline: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: COLORS.warning,
   },
   devButtonOverpriced: {
-    backgroundColor: '#f97316',
+    backgroundColor: COLORS.pushed,
   },
   devButtonPredatory: {
-    backgroundColor: '#ef4444',
+    backgroundColor: COLORS.danger,
   },
   devButtonText: {
     color: '#fff',
