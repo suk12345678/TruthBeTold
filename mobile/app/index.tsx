@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { getUserId } from '../lib/userId';
 import { COLORS, SPACING, PERSONAS } from '../constants/designTokens';
 
 export default function InputScreen() {
@@ -101,6 +102,10 @@ export default function InputScreen() {
     setError('');
 
     try {
+      // Get or create anonymous user ID
+      const userId = await getUserId();
+      console.log('User ID:', userId);
+
       // Call the scoring function
       console.log('Calling score function with:', {
         rent: parseFloat(formData.rent),
@@ -125,7 +130,7 @@ export default function InputScreen() {
         throw functionError;
       }
 
-      // Save to database
+      // Save to database with user_id
       const { data: rentInput, error: dbError } = await supabase
         .from('rent_inputs')
         .insert({
@@ -134,18 +139,20 @@ export default function InputScreen() {
           market_rent: parseFloat(formData.market_rent),
           unit_quality: parseInt(formData.unit_quality),
           zip_code: formData.zip_code,
+          user_id: userId,
         })
         .select()
         .single();
 
       if (dbError) throw dbError;
 
-      // Save score with persona for analytics
+      // Save score with persona and user_id for analytics
       await supabase.from('scores').insert({
         rent_input_id: rentInput.id,
         score: data.score,
         verdict: data.verdict,
         persona: selectedPersona,
+        user_id: userId,
       });
 
       // Navigate to score screen
