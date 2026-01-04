@@ -46,8 +46,8 @@ export const PERSONAS = {
   investigator: {
     id: 'investigator',
     name: 'The Investigator',
-    emoji: '🕵️',
-    tagline: 'Something's off...',
+    emoji: '🔍',
+    tagline: "Something's off...",
     description: 'Suspicious, pattern-spotting',
   },
 };
