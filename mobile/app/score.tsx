@@ -21,7 +21,8 @@ export default function ScoreScreen() {
 
   const score = parseInt(params.score as string);
   const verdict = params.verdict as string;
-  const verdictMeta = getVerdictMeta(verdict);
+  const persona = (params.persona as string) || 'supportive_friend';
+  const verdictMeta = getVerdictMeta(verdict, persona);
 
   const fade = useSharedValue(0);
   const translateY = useSharedValue(12);

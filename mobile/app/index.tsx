@@ -2,17 +2,18 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
-import { COLORS, SPACING } from '../constants/designTokens';
+import { COLORS, SPACING, PERSONAS } from '../constants/designTokens';
 
 export default function InputScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedPersona, setSelectedPersona] = useState('supportive_friend');
 
   useEffect(() => {
     console.log('InputScreen mounted - Home page loaded successfully');
   }, []);
-  
+
   const [formData, setFormData] = useState({
     rent: '',
     income: '',
@@ -157,6 +158,7 @@ export default function InputScreen() {
           market_rent: formData.market_rent,
           unit_quality: formData.unit_quality,
           zip_code: formData.zip_code,
+          persona: selectedPersona,
         },
       });
     } catch (err: any) {
@@ -211,6 +213,28 @@ export default function InputScreen() {
             >
               <Text style={styles.devButtonText}>Predatory</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Persona Selection */}
+        <View style={styles.personaSection}>
+          <Text style={styles.personaSectionTitle}>Who should review this rent?</Text>
+          <View style={styles.personaGrid}>
+            {Object.values(PERSONAS).map((persona) => (
+              <TouchableOpacity
+                key={persona.id}
+                style={[
+                  styles.personaCard,
+                  selectedPersona === persona.id && styles.personaCardSelected,
+                ]}
+                onPress={() => setSelectedPersona(persona.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.personaEmoji}>{persona.emoji}</Text>
+                <Text style={styles.personaName}>{persona.name}</Text>
+                <Text style={styles.personaTagline}>{persona.tagline}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -431,6 +455,54 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  personaSection: {
+    marginBottom: SPACING.lg,
+  },
+  personaSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
+  },
+  personaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    justifyContent: 'space-between',
+  },
+  personaCard: {
+    width: '48%',
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: COLORS.divider,
+    padding: SPACING.md,
+    alignItems: 'center',
+    minHeight: 120,
+    justifyContent: 'center',
+  },
+  personaCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#F8F8FF',
+  },
+  personaEmoji: {
+    fontSize: 32,
+    marginBottom: SPACING.xs,
+  },
+  personaName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  personaTagline: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
 

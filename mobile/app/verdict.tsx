@@ -20,8 +20,9 @@ export default function VerdictScreen() {
   const income = parseFloat(params.income as string);
   const market_rent = parseFloat(params.market_rent as string);
   const unit_quality = parseInt(params.unit_quality as string);
+  const persona = (params.persona as string) || 'supportive_friend';
 
-  const verdictMeta = getVerdictMeta(verdict);
+  const verdictMeta = getVerdictMeta(verdict, persona);
 
   // Animation values
   const headerFade = useSharedValue(0);
