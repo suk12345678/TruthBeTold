@@ -60,7 +60,7 @@ export function getVerdictMeta(verdict: string) {
         color: COLORS.danger,
         bg: "rgba(217,83,79,0.12)",
         text: "This deal puts you at risk. You deserve better than a rent that drains you.",
-        momentOfTruth: "This is what your budget has been trying to tell you.",
+        momentOfTruth: "You needed to see this in black and white.",
         supportLine: "This score is about the deal, not your value.",
         shareText: "Just checked my rent with TruthBeTold… and wow. 🚨",
       };
