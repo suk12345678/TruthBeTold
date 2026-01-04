@@ -168,13 +168,26 @@ export default function ScoreScreen() {
             <Text style={styles.primaryButtonText}>View Full Breakdown</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={styles.secondaryLink}
-            onPress={handleTryAnother}
-          >
-            <Text style={styles.secondaryLinkText}>Try another place</Text>
-          </TouchableOpacity>
+          <View style={styles.secondaryActions}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.secondaryLink}
+              onPress={handleShare}
+              disabled={isSharing}
+            >
+              <Text style={styles.secondaryLinkText}>
+                {isSharing ? 'Sharing...' : 'Share My Score'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.secondaryLink}
+              onPress={handleTryAnother}
+            >
+              <Text style={styles.secondaryLinkText}>Try another place</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Animated.View>
     </View>
@@ -280,8 +293,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  secondaryLink: {
+  secondaryActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: SPACING.lg,
     marginTop: SPACING.md,
+  },
+  secondaryLink: {
     alignItems: 'center',
   },
   secondaryLinkText: {
