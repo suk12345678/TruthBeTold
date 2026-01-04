@@ -57,6 +57,17 @@ export default function InputScreen() {
     setError('');
   };
 
+  // Check if all required fields are filled
+  const isFormComplete = () => {
+    return (
+      formData.rent.trim() !== '' &&
+      formData.income.trim() !== '' &&
+      formData.market_rent.trim() !== '' &&
+      formData.unit_quality.trim() !== '' &&
+      formData.zip_code.trim() !== ''
+    );
+  };
+
   const validateForm = () => {
     // Trim whitespace from all fields
     const trimmedData = {
@@ -270,9 +281,12 @@ export default function InputScreen() {
         <View style={styles.primaryActionArea}>
           <TouchableOpacity
             activeOpacity={0.85}
-            style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+            style={[
+              styles.primaryButton,
+              (loading || !isFormComplete()) && styles.primaryButtonDisabled
+            ]}
             onPress={handleCalculate}
-            disabled={loading}
+            disabled={loading || !isFormComplete()}
           >
             <Text style={styles.primaryButtonText}>
               {loading ? 'Scoring...' : 'Get My Rent Score'}
