@@ -1,13 +1,6 @@
 name: iOS Build (Free - No EAS)
 
 on:
-  push:
-    branches: [master, main]
-    paths:
-      - 'mobile/**'
-      - '.github/workflows/ios-build.yml'
-  pull_request:
-    branches: [master, main]
   workflow_dispatch:
     inputs:
       build_type:
