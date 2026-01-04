@@ -140,11 +140,12 @@ export default function InputScreen() {
 
       if (dbError) throw dbError;
 
-      // Save score
+      // Save score with persona for analytics
       await supabase.from('scores').insert({
         rent_input_id: rentInput.id,
         score: data.score,
         verdict: data.verdict,
+        persona: selectedPersona,
       });
 
       // Navigate to score screen

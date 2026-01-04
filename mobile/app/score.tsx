@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState, useEffect } from 'react';
 import { captureRef } from 'react-native-view-shot';
@@ -116,7 +116,7 @@ export default function ScoreScreen() {
   };
 
   return (
-    <View style={styles.screenContainer}>
+    <ScrollView style={styles.screenContainer} contentContainerStyle={styles.scrollContent}>
       <Animated.View style={[styles.scoreScreenContent, animStyle]}>
         <Text style={styles.appNameTop}>TruthBeTold</Text>
         <Text style={styles.screenTitle}>Your Rent Score</Text>
@@ -198,7 +198,7 @@ export default function ScoreScreen() {
           </View>
         </View>
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -206,11 +206,13 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  scrollContent: {
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.xl,
+    paddingBottom: SPACING.xl,
   },
   scoreScreenContent: {
-    flex: 1,
     alignItems: 'center',
   },
   appNameTop: {
@@ -322,11 +324,11 @@ const styles = StyleSheet.create({
   secondaryActions: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: SPACING.lg,
     marginTop: SPACING.md,
   },
   secondaryLink: {
     alignItems: 'center',
+    marginHorizontal: SPACING.sm,
   },
   secondaryLinkText: {
     color: COLORS.textSecondary,
