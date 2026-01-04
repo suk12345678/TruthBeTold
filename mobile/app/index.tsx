@@ -8,7 +8,7 @@ export default function InputScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedPersona, setSelectedPersona] = useState('supportive_friend');
+  const [selectedPersona, setSelectedPersona] = useState('empath');
 
   useEffect(() => {
     console.log('InputScreen mounted - Home page loaded successfully');

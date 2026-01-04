@@ -11,7 +11,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import ScoreDial from '../components/ScoreDial';
-import { COLORS, SPACING, getVerdictMeta } from '../constants/designTokens';
+import { COLORS, SPACING, getVerdictMeta, getPersonaInfo } from '../constants/designTokens';
 
 export default function ScoreScreen() {
   const router = useRouter();
@@ -21,8 +21,9 @@ export default function ScoreScreen() {
 
   const score = parseInt(params.score as string);
   const verdict = params.verdict as string;
-  const persona = (params.persona as string) || 'supportive_friend';
+  const persona = (params.persona as string) || 'empath';
   const verdictMeta = getVerdictMeta(verdict, persona);
+  const personaInfo = getPersonaInfo(persona);
 
   const fade = useSharedValue(0);
   const translateY = useSharedValue(12);
@@ -120,6 +121,12 @@ export default function ScoreScreen() {
         <Text style={styles.appNameTop}>TruthBeTold</Text>
         <Text style={styles.screenTitle}>Your Rent Score</Text>
 
+        {/* Persona Badge */}
+        <View style={styles.personaBadge}>
+          <Text style={styles.personaBadgeEmoji}>{personaInfo.emoji}</Text>
+          <Text style={styles.personaBadgeText}>Speaking as: {personaInfo.name}</Text>
+        </View>
+
         <ScoreDial score={score} />
 
         <View style={styles.verdictSection}>
@@ -216,7 +223,25 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '700',
     color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
+  },
+  personaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: 999,
     marginBottom: SPACING.lg,
+  },
+  personaBadgeEmoji: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  personaBadgeText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   verdictSection: {
     alignItems: 'center',
