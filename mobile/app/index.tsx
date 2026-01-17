@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Keyboa
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { getUserId } from '../lib/userId';
+import { calculateScore } from '../lib/scoring';
 import { COLORS, SPACING, PERSONAS } from '../constants/designTokens';
 
 export default function InputScreen() {
@@ -106,28 +107,35 @@ export default function InputScreen() {
       const userId = await getUserId();
       console.log('User ID:', userId);
 
-      // Call the scoring function
-      console.log('Calling score function with:', {
+      const scoreInput = {
         rent: parseFloat(formData.rent),
         income: parseFloat(formData.income),
         market_rent: parseFloat(formData.market_rent),
         unit_quality: parseInt(formData.unit_quality),
-      });
+      };
 
-      const { data, error: functionError } = await supabase.functions.invoke('score', {
-        body: {
-          rent: parseFloat(formData.rent),
-          income: parseFloat(formData.income),
-          market_rent: parseFloat(formData.market_rent),
-          unit_quality: parseInt(formData.unit_quality),
+      let scoreResult;
+
+      // Try to call the Supabase Edge Function first
+      try {
+        console.log('Calling Supabase score function with:', scoreInput);
+
+        const { data, error: functionError } = await supabase.functions.invoke('score', {
+          body: scoreInput
+        });
+
+        if (functionError) {
+          console.warn('Edge Function error, falling back to local calculation:', functionError);
+          throw functionError;
         }
-      });
 
-      console.log('Function response:', { data, error: functionError });
-
-      if (functionError) {
-        console.error('Function error:', functionError);
-        throw functionError;
+        console.log('Edge Function response:', data);
+        scoreResult = data;
+      } catch (functionError) {
+        // Fallback to local calculation if Edge Function fails
+        console.log('Using local scoring calculation as fallback');
+        scoreResult = calculateScore(scoreInput);
+        console.log('Local calculation result:', scoreResult);
       }
 
       // Save to database with user_id
@@ -149,8 +157,8 @@ export default function InputScreen() {
       // Save score with persona and user_id for analytics
       await supabase.from('scores').insert({
         rent_input_id: rentInput.id,
-        score: data.score,
-        verdict: data.verdict,
+        score: scoreResult.score,
+        verdict: scoreResult.verdict,
         persona: selectedPersona,
         user_id: userId,
       });
@@ -159,8 +167,8 @@ export default function InputScreen() {
       router.push({
         pathname: '/score',
         params: {
-          score: data.score,
-          verdict: data.verdict,
+          score: scoreResult.score,
+          verdict: scoreResult.verdict,
           rent: formData.rent,
           income: formData.income,
           market_rent: formData.market_rent,
