@@ -118,16 +118,18 @@ export default function ScoreScreen() {
   return (
     <ScrollView style={styles.screenContainer} contentContainerStyle={styles.scrollContent}>
       <Animated.View style={[styles.scoreScreenContent, animStyle]}>
-        <Text style={styles.appNameTop}>TruthBeTold</Text>
-        <Text style={styles.screenTitle}>Your Rent Score</Text>
+        {/* Wrap the shareable content in a View with the ref */}
+        <View ref={scoreCardRef} collapsable={false}>
+          <Text style={styles.appNameTop}>TruthBeTold</Text>
+          <Text style={styles.screenTitle}>Your Rent Score</Text>
 
-        {/* Persona Badge */}
-        <View style={styles.personaBadge}>
-          <Text style={styles.personaBadgeEmoji}>{personaInfo.emoji}</Text>
-          <Text style={styles.personaBadgeText}>Speaking as: {personaInfo.name}</Text>
-        </View>
+          {/* Persona Badge */}
+          <View style={styles.personaBadge}>
+            <Text style={styles.personaBadgeEmoji}>{personaInfo.emoji}</Text>
+            <Text style={styles.personaBadgeText}>Speaking as: {personaInfo.name}</Text>
+          </View>
 
-        <ScoreDial score={score} />
+          <ScoreDial score={score} />
 
         <View style={styles.verdictSection}>
           <Text style={styles.momentOfTruth}>{verdictMeta.momentOfTruth}</Text>
@@ -165,6 +167,8 @@ export default function ScoreScreen() {
 
           <Text style={styles.verdictPrimaryText}>{verdictMeta.text}</Text>
           <Text style={styles.supportLine}>{verdictMeta.supportLine}</Text>
+        </View>
+        {/* End of shareable content */}
         </View>
 
         <View style={styles.scoreActions}>
