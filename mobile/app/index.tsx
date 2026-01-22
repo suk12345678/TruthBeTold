@@ -1,16 +1,21 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { getUserId } from '../lib/userId';
 import { calculateScore } from '../lib/scoring';
 import { COLORS, SPACING, PERSONAS } from '../constants/designTokens';
+import { getMarketRentForZip } from '../lib/zipCodeLookup';
+import { getCachedFMR, setCachedFMR } from '../lib/fmrCache';
 
 export default function InputScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedPersona, setSelectedPersona] = useState('empath');
+  const [fetchingMarketRent, setFetchingMarketRent] = useState(false);
+  const [marketRentSource, setMarketRentSource] = useState<'auto' | 'manual' | null>(null);
+  const zipDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     console.log('InputScreen mounted - Home page loaded successfully');
@@ -23,6 +28,77 @@ export default function InputScreen() {
     unit_quality: '',
     zip_code: '',
   });
+
+  // Auto-fetch market rent when zip code is entered
+  useEffect(() => {
+    // Clear previous debounce
+    if (zipDebounceRef.current) {
+      clearTimeout(zipDebounceRef.current);
+    }
+
+    const zipCode = formData.zip_code.trim();
+
+    // Only fetch if:
+    // 1. Zip code is 5 digits
+    // 2. Market rent is empty OR was previously auto-filled (not manually edited)
+    // 3. Not currently fetching
+    if (zipCode.length === 5 &&
+        (!formData.market_rent || marketRentSource === 'auto') &&
+        !fetchingMarketRent) {
+      zipDebounceRef.current = setTimeout(async () => {
+        await fetchMarketRent(zipCode);
+      }, 800); // Wait 800ms after user stops typing
+    }
+
+    return () => {
+      if (zipDebounceRef.current) {
+        clearTimeout(zipDebounceRef.current);
+      }
+    };
+  }, [formData.zip_code, marketRentSource, fetchingMarketRent]);
+
+  const fetchMarketRent = async (zipCode: string) => {
+    // Don't fetch if user has manually edited the market rent
+    if (marketRentSource === 'manual') {
+      return;
+    }
+
+    setFetchingMarketRent(true);
+    setError('');
+
+    try {
+      // Check cache first
+      const cachedRent = await getCachedFMR(zipCode);
+      if (cachedRent) {
+        setFormData(prev => ({ ...prev, market_rent: Math.round(cachedRent).toString() }));
+        setMarketRentSource('auto');
+        setFetchingMarketRent(false);
+        return;
+      }
+
+      // Fetch from API
+      const result = await getMarketRentForZip(zipCode);
+
+      if (result.marketRent && result.location) {
+        const marketRent = Math.round(result.marketRent);
+        setFormData(prev => ({ ...prev, market_rent: marketRent.toString() }));
+        setMarketRentSource('auto');
+
+        // Cache the result
+        if (result.location.stateCode) {
+          await setCachedFMR(zipCode, marketRent, result.location.stateCode);
+        }
+      } else {
+        // If API fails, don't show error - user can still enter manually
+        console.warn('Could not fetch market rent for zip code:', zipCode);
+      }
+    } catch (err) {
+      console.error('Error fetching market rent:', err);
+      // Don't show error to user - they can enter manually
+    } finally {
+      setFetchingMarketRent(false);
+    }
+  };
 
   // Dev helper: prepopulate with test data
   const fillTestData = (scenario: 'fair' | 'borderline' | 'overpriced' | 'predatory') => {
@@ -280,15 +356,32 @@ export default function InputScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Market Rent</Text>
+            <View style={styles.fieldLabelRow}>
+              <Text style={styles.fieldLabel}>Market Rent</Text>
+              {fetchingMarketRent && (
+                <ActivityIndicator size="small" color={COLORS.primary} style={styles.loadingIndicator} />
+              )}
+              {marketRentSource === 'auto' && !fetchingMarketRent && (
+                <Text style={styles.autoFillBadge}>Auto-filled</Text>
+              )}
+            </View>
             <TextInput
               style={styles.input}
-              placeholder="$2,200"
+              placeholder={fetchingMarketRent ? "Fetching..." : "$2,200"}
               placeholderTextColor="#B0B0B0"
               keyboardType="numeric"
               value={formData.market_rent}
-              onChangeText={(text) => setFormData({ ...formData, market_rent: text })}
+              onChangeText={(text) => {
+                setFormData({ ...formData, market_rent: text });
+                setMarketRentSource('manual'); // User is manually editing
+              }}
+              editable={!fetchingMarketRent}
             />
+            {marketRentSource === 'auto' && formData.market_rent && (
+              <Text style={styles.helperText}>
+                Based on HUD Fair Market Rent data for your area. You can edit this.
+              </Text>
+            )}
           </View>
 
           <View style={styles.fieldGroup}>
@@ -518,6 +611,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
     textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.xs,
+  },
+  loadingIndicator: {
+    marginLeft: SPACING.xs,
+  },
+  autoFillBadge: {
+    fontSize: 11,
+    color: COLORS.primary,
+    fontWeight: '600',
+    backgroundColor: '#E8F4FD',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  helperText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
     fontStyle: 'italic',
   },
 });
