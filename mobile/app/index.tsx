@@ -58,8 +58,11 @@ export default function InputScreen() {
   }, [formData.zip_code, marketRentSource, fetchingMarketRent]);
 
   const fetchMarketRent = async (zipCode: string) => {
+    console.log('fetchMarketRent called for zip:', zipCode, 'marketRentSource:', marketRentSource);
+
     // Don't fetch if user has manually edited the market rent
     if (marketRentSource === 'manual') {
+      console.log('Skipping fetch - user has manually edited market rent');
       return;
     }
 
@@ -70,6 +73,7 @@ export default function InputScreen() {
       // Check cache first
       const cachedRent = await getCachedFMR(zipCode);
       if (cachedRent) {
+        console.log('Using cached market rent:', cachedRent);
         setFormData(prev => ({ ...prev, market_rent: Math.round(cachedRent).toString() }));
         setMarketRentSource('auto');
         setFetchingMarketRent(false);
@@ -372,8 +376,10 @@ export default function InputScreen() {
               keyboardType="numeric"
               value={formData.market_rent}
               onChangeText={(text) => {
+                console.log('Market rent manually changed to:', text);
                 setFormData({ ...formData, market_rent: text });
                 setMarketRentSource('manual'); // User is manually editing
+                console.log('marketRentSource set to: manual');
               }}
               editable={!fetchingMarketRent}
             />
