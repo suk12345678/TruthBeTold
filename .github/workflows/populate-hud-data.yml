@@ -1,0 +1,41 @@
+name: Populate HUD Data Daily
+
+on:
+  schedule:
+    # Runs at 2:00 AM UTC every day
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allows manual triggering from GitHub Actions tab
+
+jobs:
+  populate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Call Supabase Edge Function
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            https://kxaoxixijylkfsaitfky.supabase.co/functions/v1/populate-hud-data \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"batchSize": 500}')
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+          
+          if [ "$http_code" -ne 200 ]; then
+            echo "Error: Function returned status $http_code"
+            exit 1
+          fi
+          
+      - name: Report Status
+        if: always()
+        run: |
+          if [ $? -eq 0 ]; then
+            echo "✅ HUD data population completed successfully"
+          else
+            echo "❌ HUD data population failed"
+          fi
+
