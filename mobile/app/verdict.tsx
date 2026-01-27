@@ -159,7 +159,8 @@ export default function VerdictScreen() {
 
 
   const handleTryAnother = () => {
-    router.push('/');
+    // Dismiss all screens and go back to home, preserving state
+    router.dismissAll();
   };
 
   return (

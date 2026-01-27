@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, ScrollView, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState, useEffect } from 'react';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -18,6 +19,11 @@ export default function ScoreScreen() {
   const params = useLocalSearchParams();
   const scoreCardRef = useRef<View>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const { height: screenHeight } = useWindowDimensions();
+
+  // Adaptive spacing based on screen height
+  const isSmallScreen = screenHeight < 700;
+  const isMediumScreen = screenHeight >= 700 && screenHeight < 800;
 
   const score = parseInt(params.score as string);
   const verdict = params.verdict as string;
@@ -116,29 +122,59 @@ export default function ScoreScreen() {
   };
 
   return (
-    <ScrollView style={styles.screenContainer} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.screenContainer}
+      contentContainerStyle={[
+        styles.scrollContent,
+        {
+          paddingVertical: isSmallScreen ? SPACING.md : SPACING.xl,
+          paddingHorizontal: isSmallScreen ? SPACING.md : SPACING.lg,
+        }
+      ]}
+    >
       <Animated.View style={[styles.scoreScreenContent, animStyle]}>
         {/* Wrap the shareable content in a View with the ref */}
         <View ref={scoreCardRef} collapsable={false}>
-          <Text style={styles.appNameTop}>TruthBeTold</Text>
-          <Text style={styles.screenTitle}>Your Rent Score</Text>
+          <Text style={[styles.appNameTop, { fontSize: isSmallScreen ? 16 : 18, marginBottom: isSmallScreen ? 4 : SPACING.sm }]}>TruthBeTold</Text>
+          <Text style={[styles.screenTitle, { fontSize: isSmallScreen ? 22 : 26, marginBottom: isSmallScreen ? 4 : SPACING.sm }]}>Your Rent Score</Text>
 
           {/* Persona Badge */}
-          <View style={styles.personaBadge}>
-            <Text style={styles.personaBadgeEmoji}>{personaInfo.emoji}</Text>
-            <Text style={styles.personaBadgeText}>Speaking as: {personaInfo.name}</Text>
+          <View style={[styles.personaBadge, {
+            paddingHorizontal: isSmallScreen ? SPACING.sm : SPACING.md,
+            paddingVertical: isSmallScreen ? 4 : SPACING.xs,
+            marginBottom: isSmallScreen ? SPACING.sm : SPACING.lg,
+          }]}>
+            <View style={[styles.personaBadgeIconContainer, { backgroundColor: personaInfo.iconBg }]}>
+              <Ionicons
+                name={personaInfo.icon}
+                size={isSmallScreen ? 12 : 14}
+                color={personaInfo.iconColor}
+              />
+            </View>
+            <Text style={[styles.personaBadgeText, { fontSize: isSmallScreen ? 12 : 13 }]}>Speaking as: {personaInfo.name}</Text>
           </View>
 
-          <ScoreDial score={score} />
+          <ScoreDial score={score} size={isSmallScreen ? 160 : undefined} />
 
-        <View style={styles.verdictSection}>
-          <Text style={styles.momentOfTruth}>{verdictMeta.momentOfTruth}</Text>
+        <View style={[styles.verdictSection, {
+          marginTop: isSmallScreen ? SPACING.xs : SPACING.md,
+          paddingHorizontal: isSmallScreen ? SPACING.md : SPACING.lg,
+        }]}>
+          <Text style={[styles.momentOfTruth, {
+            fontSize: isSmallScreen ? 13 : 15,
+            marginBottom: isSmallScreen ? SPACING.xs : SPACING.md,
+          }]}>{verdictMeta.momentOfTruth}</Text>
 
-          <View style={styles.verdictBadgeContainer}>
+          <View style={[styles.verdictBadgeContainer, { marginBottom: isSmallScreen ? SPACING.xs : SPACING.md }]}>
             <View
               style={[
                 styles.verdictBadge,
-                { backgroundColor: verdictMeta.bg, borderColor: verdictMeta.color },
+                {
+                  backgroundColor: verdictMeta.bg,
+                  borderColor: verdictMeta.color,
+                  paddingHorizontal: isSmallScreen ? SPACING.sm : SPACING.md,
+                  paddingVertical: isSmallScreen ? 4 : SPACING.xs,
+                },
               ]}
             >
               <View
@@ -150,7 +186,7 @@ export default function ScoreScreen() {
               <Text
                 style={[
                   styles.verdictBadgeText,
-                  { color: verdictMeta.color },
+                  { color: verdictMeta.color, fontSize: isSmallScreen ? 12 : 13 },
                 ]}
               >
                 {verdictMeta.label}
@@ -165,29 +201,36 @@ export default function ScoreScreen() {
             />
           </View>
 
-          <Text style={styles.verdictPrimaryText}>{verdictMeta.text}</Text>
-          <Text style={styles.supportLine}>{verdictMeta.supportLine}</Text>
+          <Text style={[styles.verdictPrimaryText, {
+            fontSize: isSmallScreen ? 15 : 18,
+            marginBottom: isSmallScreen ? SPACING.xs : SPACING.md,
+            lineHeight: isSmallScreen ? 22 : 26,
+          }]}>{verdictMeta.text}</Text>
+          <Text style={[styles.supportLine, {
+            fontSize: isSmallScreen ? 12 : 14,
+            lineHeight: isSmallScreen ? 18 : 20,
+          }]}>{verdictMeta.supportLine}</Text>
         </View>
         {/* End of shareable content */}
         </View>
 
-        <View style={styles.scoreActions}>
+        <View style={[styles.scoreActions, { marginTop: isSmallScreen ? SPACING.md : SPACING.xl }]}>
           <TouchableOpacity
             activeOpacity={0.85}
-            style={styles.primaryButton}
+            style={[styles.primaryButton, { paddingVertical: isSmallScreen ? 12 : 14 }]}
             onPress={handleSeeDetails}
           >
-            <Text style={styles.primaryButtonText}>View Full Breakdown</Text>
+            <Text style={[styles.primaryButtonText, { fontSize: isSmallScreen ? 14 : 16 }]}>View Full Breakdown</Text>
           </TouchableOpacity>
 
-          <View style={styles.secondaryActions}>
+          <View style={[styles.secondaryActions, { marginTop: isSmallScreen ? SPACING.xs : SPACING.md }]}>
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.secondaryLink}
               onPress={handleShare}
               disabled={isSharing}
             >
-              <Text style={styles.secondaryLinkText}>
+              <Text style={[styles.secondaryLinkText, { fontSize: isSmallScreen ? 13 : 15 }]}>
                 {isSharing ? 'Sharing...' : 'Share My Score'}
               </Text>
             </TouchableOpacity>
@@ -197,7 +240,7 @@ export default function ScoreScreen() {
               style={styles.secondaryLink}
               onPress={handleTryAnother}
             >
-              <Text style={styles.secondaryLinkText}>Try another place</Text>
+              <Text style={[styles.secondaryLinkText, { fontSize: isSmallScreen ? 13 : 15 }]}>Try another place</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -239,6 +282,14 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     borderRadius: 999,
     marginBottom: SPACING.lg,
+  },
+  personaBadgeIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   personaBadgeEmoji: {
     fontSize: 16,
